@@ -33,7 +33,7 @@ func (c *Client) Files() (*FilesResponse, error) {
 	form := url.Values{}
 	form.Add("format", "cli")
 
-	url := fmt.Sprintf("%s/file/get_user_file_list", c.baseURL)
+	url := fmt.Sprintf("%s/file/get_user_file_list", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -42,11 +42,16 @@ func (c *Client) Files() (*FilesResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", defaultAcceptHeader)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -74,14 +79,14 @@ type UploadResponse struct {
 }
 
 // Upload takes an io.ReadCloser , reads and uploads from it and then returns the response
-func (c *Client) Upload(name, notes string, scan bool, f io.ReadCloser) (*UploadResponse, error) {
+func (c *Client) Upload(name, notes string, scan bool, f io.Reader) (*UploadResponse, error) {
 	// yucky to take a Reader and then just read all the bytes =(
 	file, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/file/upload", c.baseURL)
+	url := fmt.Sprintf("%s/file/upload", c.BaseURL)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(file))
 	if err != nil {
 		return nil, err
@@ -110,11 +115,15 @@ func (c *Client) Upload(name, notes string, scan bool, f io.ReadCloser) (*Upload
 	req.Header.Add("Content-Length", strconv.Itoa(len(file)))
 	req.Header.Add("X-File-Name", name)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -148,7 +157,7 @@ func (c *Client) Delete(files []string) (*DeleteResponse, error) {
 	fileIDs := strings.Join(files, ",")
 	form.Add("fileIds", fileIDs)
 
-	url := fmt.Sprintf("%s/file/delete_files", c.baseURL)
+	url := fmt.Sprintf("%s/file/delete_files", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -157,11 +166,15 @@ func (c *Client) Delete(files []string) (*DeleteResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", defaultAcceptHeader)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

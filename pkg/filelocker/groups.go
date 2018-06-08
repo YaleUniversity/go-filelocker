@@ -28,7 +28,7 @@ func (c *Client) Groups() (*GroupsResponse, error) {
 	form := url.Values{}
 	form.Add("format", "cli")
 
-	url := fmt.Sprintf("%s/account/get_groups", c.baseURL)
+	url := fmt.Sprintf("%s/account/get_groups", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -37,11 +37,15 @@ func (c *Client) Groups() (*GroupsResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", defaultAcceptHeader)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

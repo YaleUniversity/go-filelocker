@@ -5,23 +5,23 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // SecureMessage is an encrypted message sent through filelocker
 type SecureMessage struct {
-	Body       string
-	Created    string
-	Expiration string
-	ID         int
-	OwnerID    string
-	Recipients []string
-	Subject    string
-	Viewed     string
+	Body       string   `json:"body"`
+	Created    string   `json:"creationDatetime"`
+	Expiration string   `json:"expirationDatetime"`
+	ID         int      `json:"id"`
+	OwnerID    string   `json:"ownerId"`
+	Recipients []string `json:"messageRecipients"`
+	Subject    string   `json:"subject"`
+	Viewed     string   `json:"viewedDatetime"`
 }
 
 // SecureMessagesResponse is the response for the list of secure messages
@@ -33,7 +33,7 @@ type SecureMessagesResponse struct {
 
 // SecureMessages gets the list of messages for a user
 func (c *Client) SecureMessages() (*SecureMessagesResponse, error) {
-	url := fmt.Sprintf("%s/message/get_messages", c.baseURL)
+	url := fmt.Sprintf("%s/message/get_messages", c.BaseURL)
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, err
@@ -42,11 +42,15 @@ func (c *Client) SecureMessages() (*SecureMessagesResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -77,7 +81,7 @@ func (c *Client) SecureMessageRead(id int) (*SecureMessageReadResponse, error) {
 	form := url.Values{}
 	form.Add("messageId", strconv.Itoa(id))
 
-	url := fmt.Sprintf("%s/message/read_message", c.baseURL)
+	url := fmt.Sprintf("%s/message/read_message", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -86,11 +90,15 @@ func (c *Client) SecureMessageRead(id int) (*SecureMessageReadResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -119,7 +127,7 @@ type SecureMessageCountResponse struct {
 
 // SecureMessagesCount gets the new messages count
 func (c *Client) SecureMessagesCount() (*SecureMessageCountResponse, error) {
-	url := fmt.Sprintf("%s/message/get_new_message_count", c.baseURL)
+	url := fmt.Sprintf("%s/message/get_new_message_count", c.BaseURL)
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, err
@@ -128,11 +136,15 @@ func (c *Client) SecureMessagesCount() (*SecureMessageCountResponse, error) {
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -159,16 +171,16 @@ type NewMessageResponse struct {
 }
 
 // NewSecureMessage sends a new secure message via filelocker
-func (c *Client) NewSecureMessage(subject, msg string, recipients []string) (*NewMessageResponse, error) {
+func (c *Client) NewSecureMessage(subject, msg string, recipients []string, expire time.Time) (*NewMessageResponse, error) {
 	form := url.Values{}
 	form.Add("requestOrigin", c.Origin)
 	form.Add("subject", subject)
 	form.Add("body", msg)
-	form.Add("expiration", "07/10/2019")
+	form.Add("expiration", expire.Format("01/02/2006"))
 	recipientIds := strings.Join(recipients, ",")
 	form.Add("recipientIds", recipientIds)
 
-	url := fmt.Sprintf("%s/message/create_message", c.baseURL)
+	url := fmt.Sprintf("%s/message/create_message", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -177,18 +189,20 @@ func (c *Client) NewSecureMessage(subject, msg string, recipients []string) (*Ne
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("new: ", resp.Header, string(body))
 
 	var v NewMessageResponse
 	err = json.Unmarshal(body, &v)
@@ -220,7 +234,7 @@ func (c *Client) SecureMessagesDelete(ids []int) (*SecureMessagesDeleteResponse,
 	form.Add("messageIds", strings.Join(idList, ","))
 	form.Add("requestOrigin", c.Origin)
 
-	url := fmt.Sprintf("%s/message/delete_messages", c.baseURL)
+	url := fmt.Sprintf("%s/message/delete_messages", c.BaseURL)
 	req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -229,11 +243,15 @@ func (c *Client) SecureMessagesDelete(ids []int) (*SecureMessagesDeleteResponse,
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

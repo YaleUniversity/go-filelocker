@@ -14,8 +14,8 @@ import (
 
 // Client is a filelocker client
 type Client struct {
-	baseURL  *url.URL     // base URL for "API" calls to filelocker.  ie. https://files.yale.edu/cli/
-	client   *http.Client // HTTP client used to communicate with the "API".
+	BaseURL  *url.URL     // base URL for "API" calls to filelocker.  ie. https://files.yale.edu/cli/
+	Client   *http.Client // HTTP client used to communicate with the "API".
 	Errors   []string
 	Messages []string
 	Origin   string
@@ -65,7 +65,11 @@ func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			// TODO: log event
+		}
+	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -83,8 +87,8 @@ func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client
 	}
 
 	client := Client{
-		client:   httpClient,
-		baseURL:  bURL,
+		Client:   httpClient,
+		BaseURL:  bURL,
 		Errors:   v.ErrorMessages,
 		Messages: v.InfoMessages,
 		Origin:   v.InfoMessages[0],
