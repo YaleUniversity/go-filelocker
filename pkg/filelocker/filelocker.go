@@ -31,15 +31,17 @@ const (
 // and baseURL must also be passed and a session will be established.
 func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client, error) {
 	if httpClient == nil {
+		httpClient = &http.Client{
+			Timeout: 30 * time.Second,
+		}
+	}
+
+	if httpClient.Jar == nil {
 		jar, err := cookiejar.New(nil)
 		if err != nil {
 			return nil, err
 		}
-
-		httpClient = &http.Client{
-			Jar:     jar,
-			Timeout: 30 * time.Second,
-		}
+		httpClient.Jar = jar
 	}
 
 	bURL, err := url.Parse(baseURL)
@@ -60,7 +62,6 @@ func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client
 	req.Header.Add("Content-Type", defaultContentTypeHeader)
 	req.Header.Add("Accept", defaultAcceptHeader)
 
-	fmt.Printf("Performing request with %+v\n", req)
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -91,16 +92,12 @@ func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client
 		BaseURL:  bURL,
 		Errors:   v.ErrorMessages,
 		Messages: v.InfoMessages,
-		Origin:   v.InfoMessages[0],
 	}
 
-	if len(v.InfoMessages) == 0 {
-		return &client, errors.New("expected a request origin to be returned")
-	}
-
-	if len(v.ErrorMessages) > 0 {
+	if len(v.ErrorMessages) > 0 || len(v.InfoMessages) == 0 {
 		return &client, errors.New("error logging into filelocker")
 	}
+	client.Origin = v.InfoMessages[0]
 
 	return &client, nil
 }

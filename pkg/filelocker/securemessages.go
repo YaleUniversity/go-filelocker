@@ -172,11 +172,20 @@ type NewMessageResponse struct {
 
 // NewSecureMessage sends a new secure message via filelocker
 func (c *Client) NewSecureMessage(subject, msg string, recipients []string, expire time.Time) (*NewMessageResponse, error) {
+	if subject == "" {
+		return nil, errors.New("subject is required")
+	}
+
+	if len(recipients) == 0 {
+		return nil, errors.New("a list of recipients is required")
+	}
+
 	form := url.Values{}
 	form.Add("requestOrigin", c.Origin)
 	form.Add("subject", subject)
 	form.Add("body", msg)
 	form.Add("expiration", expire.Format("01/02/2006"))
+
 	recipientIds := strings.Join(recipients, ",")
 	form.Add("recipientIds", recipientIds)
 
