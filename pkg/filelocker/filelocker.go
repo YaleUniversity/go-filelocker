@@ -72,6 +72,11 @@ func NewClient(userID, apiKey, baseURL string, httpClient *http.Client) (*Client
 		}
 	}()
 
+	if resp.StatusCode > 200 {
+		msg := fmt.Sprintf("non-succcess response logging into filelocker: %s", resp.Status)
+		return nil, errors.New(msg)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
